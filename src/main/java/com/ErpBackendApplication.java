@@ -34,8 +34,8 @@ public class ErpBackendApplication {
                 if (userRepo.count() == 0) {
                     userRepo.save(new User("admin", "$2a$12$hBuoF9srEyjvUEdhfY9Xe.z60XHI88d7blvJcruZevpSe0BAWb56i", "Admin User", "admin@erp.local", admin));
                     // password 'admin123' hashed with BCrypt example
-                    userRepo.save(new User("manager", "$2a$10$6kXQz1f8XKJ8v7v1yQzZ.e6b6YQ6wqHn1Z5u5Zr3YVqg8Zb1lF2eK", "Manger User", "manager@erp.local", manager));
-                    userRepo.save(new User("cashier", "$2a$10$6kXQz1f8XKJ8v7v1yQzZ.e6b6YQ6wqHn1Z5u5Zr3YVqg8Zb1lF2eK", "Cashier User", "cashier@erp.local", cashier));
+                    userRepo.save(new User("manager", "$2a$12$hBuoF9srEyjvUEdhfY9Xe.z60XHI88d7blvJcruZevpSe0BAWb56i", "Manger User", "manager@erp.local", manager));
+                    userRepo.save(new User("cashier", "$2a$12$hBuoF9srEyjvUEdhfY9Xe.z60XHI88d7blvJcruZevpSe0BAWb56i", "Cashier User", "cashier@erp.local", cashier));
 
                 }
             }

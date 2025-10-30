@@ -31,13 +31,14 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
-                
+                .requestMatchers("/api/auth/me").authenticated()
                 // Role-based endpoints
                 .requestMatchers("/api/users/**").hasRole("ADMIN")        // Only ADMIN
                 .requestMatchers("/api/customers/**").hasAnyRole("ADMIN", "MANAGER") // ADMIN or MANAGER
                 .requestMatchers("/api/products/**").hasAnyRole("ADMIN", "MANAGER")
                 .requestMatchers("/api/invoices/**").hasAnyRole("ADMIN", "MANAGER")
                 
+
                 // Any other request requires authentication
                 .anyRequest().authenticated()
             )

@@ -20,13 +20,16 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Ensure ROLE_ prefix exists
         String roleName = user.getRole() != null ? user.getRole().getName() : "";
+
+        // ✅ If DB already has ROLE_ prefix, don't add again
         if (!roleName.startsWith("ROLE_")) {
             roleName = "ROLE_" + roleName;
         }
+
         return Collections.singleton(new SimpleGrantedAuthority(roleName));
     }
+
 
     @Override
     public String getPassword() { 

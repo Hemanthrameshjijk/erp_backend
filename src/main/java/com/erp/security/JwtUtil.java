@@ -2,6 +2,8 @@ package com.erp.security;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +25,8 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
     
+    private static final Set<String> tokenBlacklist = new HashSet<>();
+
     @PostConstruct
     public void init() {
         System.out.println("Loaded JWT Secret: " + secret);
@@ -52,13 +56,28 @@ public class JwtUtil {
         return claimsResolver.apply(claims);
     }
 
+  
+    
     public boolean validateToken(String token, String username) {
+        // ✅ Check token blacklist
+        if (tokenBlacklist.contains(token)) {
+            return false;
+        }
+
         final String user = extractUsername(token);
         return (user.equals(username) && !isTokenExpired(token));
-    }
+    }	
 
     private boolean isTokenExpired(String token) {
         final Date expirationDate = extractClaim(token, Claims::getExpiration);
         return expirationDate.before(new Date());
+    }
+    // ✅ Logout support
+    public void blacklistToken(String token) {
+        tokenBlacklist.add(token);
+    }
+
+    public boolean isBlacklisted(String token) {
+        return tokenBlacklist.contains(token);
     }
 }

@@ -5,9 +5,9 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,9 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.erp.dto.AuthRequest;
 import com.erp.dto.AuthResponse;
 import com.erp.repository.UserRepository;
+import com.erp.security.CustomUserDetails;
 import com.erp.security.JwtUtil;
 
 import entity.User;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -63,8 +65,40 @@ public class AuthController {
         String jwt = jwtUtil.generateToken(u);
         return new AuthResponse(jwt, u.getUsername(), u.getRole()==null?null:u.getRole().getName());
     }
+    
+    @GetMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
 
-    @GetMapping("/status")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public String status() { return "auth ok"; }
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            jwtUtil.blacklistToken(token);
+            return ResponseEntity.ok("Logged out successfully");
+        }
+
+        return ResponseEntity.badRequest().body("No token found");
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> profile(Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("User not authenticated");
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (!(principal instanceof CustomUserDetails customUser)) {
+            return ResponseEntity.status(401).body("Invalid session token");
+        }
+
+        return ResponseEntity.ok(
+            Map.of(
+                "id", customUser.getUser().getId(),
+                "username", customUser.getUsername(),
+                "role", customUser.getAuthorities()
+            )
+        );
+    }
 }
+

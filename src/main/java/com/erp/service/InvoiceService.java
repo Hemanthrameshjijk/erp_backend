@@ -3,13 +3,12 @@ package com.erp.service;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import com.erp.dto.InvoiceItemDTO;
 import com.erp.dto.InvoiceRequest;
 import com.erp.dto.PaymentRequest;
 import com.erp.repository.InvoiceItemRepository;
@@ -36,31 +35,39 @@ public class InvoiceService {
         this.productService = productService;
     }
 
-    @Transactional
-    public Invoice createInvoice(Invoice invoice) {
-        // generate invoiceNo
-        invoice.setInvoiceNo("INV-" + UUID.randomUUID().toString().substring(0,8).toUpperCase());
+    public Invoice createInvoice(InvoiceRequest request) {
+
+        Customer customer = customerRepo.findById(request.getCustomerId())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        Invoice invoice = new Invoice();
+        invoice.setCustomer(customer);
+        invoice.setStatus("DRAFT");
 
         BigDecimal total = BigDecimal.ZERO;
-        for (InvoiceItem item : invoice.getItems()) {
-            Product product = productRepo.findById(item.getProduct().getId())
-                    .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProduct().getId()));
 
-            BigDecimal unit = item.getUnitPrice() == null ? product.getSellPrice() : item.getUnitPrice();
-            item.setUnitPrice(unit);
-            BigDecimal subtotal = unit.multiply(BigDecimal.valueOf(item.getQty()));
+        for (InvoiceItemDTO itemReq : request.getItems()) {
+            Product product = productRepo.findById(itemReq.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+
+            InvoiceItem item = new InvoiceItem();
+            item.setProduct(product);
+            item.setQty(itemReq.getQty());
+            item.setUnitPrice(itemReq.getUnitPrice());
+            item.setInvoice(invoice);
+
+            BigDecimal subtotal = itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQty()));
             item.setSubtotal(subtotal);
+
             total = total.add(subtotal);
 
-            // reduce stock
-            product.setStock(product.getStock() - item.getQty());
-            productRepo.save(product);
-
-            // create stock movement (OUT)
-            productService.changeStock(product, -item.getQty(), "OUT", invoice.getInvoiceNo(), invoice.getCreatedBy());
+            invoice.getItems().add(item);
         }
+
         invoice.setTotalAmount(total);
-        invoice.setStatus("PAID"); // simple: mark as paid for demo
+        invoice.setPaidAmount(BigDecimal.ZERO);
+        invoice.setStatus("DRAFT");
+
         return invoiceRepo.save(invoice);
     }
     public ResponseEntity<?> findAll() {
@@ -77,41 +84,7 @@ public class InvoiceService {
         return ResponseEntity.ok(invoice);
     }
 
-    public ResponseEntity<?> createInvoice(InvoiceRequest req) {
-        Optional<Customer> c = customerRepo.findById(req.getCustomerId());
-        if (c.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "Invalid customer"));
-
-        Invoice invoice = new Invoice();
-        invoice.setCustomer(c.get());
-        invoice.setStatus(req.getStatus() != null ? req.getStatus() : "DRAFT");
-        invoice.setPaidAmount(BigDecimal.ZERO);
-
-        // Save temporary to get Invoice ID
-        invoice = invoiceRepo.save(invoice);
-
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (var itemReq : req.getItems()) {
-
-            Product p = productRepo.findById(itemReq.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
-
-            InvoiceItem item = new InvoiceItem();
-            item.setInvoice(invoice);
-            item.setProduct(p);
-            item.setQty(itemReq.getQty());
-            item.setUnitPrice(itemReq.getUnitPrice());
-            item.setSubtotal(itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQty())));
-
-            total = total.add(item.getSubtotal());
-            itemRepo.save(item);
-        }
-
-        invoice.setTotalAmount(total);
-        invoiceRepo.save(invoice);
-
-        return ResponseEntity.ok(invoice);
-    }
+    
     public ResponseEntity<?> updateInvoice(Long id, InvoiceRequest req) {
         Invoice invoice = invoiceRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));

@@ -4,6 +4,8 @@ import com.erp.dto.InvoiceItemDTO;
 import com.erp.service.InvoiceItemService;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -15,6 +17,7 @@ public class InvoiceItemController {
     private final InvoiceItemService invoiceItemService;
 
     @GetMapping("/invoice/{invoiceId}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public List<InvoiceItemDTO> getItemsByInvoice(@PathVariable Long invoiceId) {
         return invoiceItemService.getItemsByInvoice(invoiceId);
     }

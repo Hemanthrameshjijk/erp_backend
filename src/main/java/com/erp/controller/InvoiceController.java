@@ -1,12 +1,23 @@
 package com.erp.controller;
 
-import com.erp.service.InvoiceService;
-import com.erp.dto.InvoiceRequest;
-import com.erp.dto.PaymentRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.erp.dto.InvoiceRequest;
+import com.erp.dto.PaymentRequest;
+import com.erp.service.InvoiceService;
+
+import entity.Invoice;
 
 @RestController
 @RequestMapping("/api/invoices")
@@ -32,13 +43,12 @@ public class InvoiceController {
     // ✅ Create invoice with items
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public ResponseEntity<?> create(@RequestBody InvoiceRequest req) {
-        return invoiceService.createInvoice(req);
+    public Invoice createInvoice(@RequestBody InvoiceRequest request) {
+        return invoiceService.createInvoice(request);
     }
 
     // ✅ Update invoice (status/edit)
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody InvoiceRequest req) {
         return invoiceService.updateInvoice(id, req);
     }

@@ -31,59 +31,65 @@ public class StockMovementController {
     @Autowired StockMovementService movementService;
     @Autowired ProductRepository productRepo;
     @Autowired UserRepository userRepo;
-    
-    
-    @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public List<StockMovement> getAll() {
-        return movementService.stockRepo.findAll();
+        // ✅ Get all stock movements
+        @GetMapping
+        public List<StockMovement> getAll() {
+            return movementService.getAll();
+        }
+
+        // ✅ Get specific stock movement by ID
+        @GetMapping("/{id}")
+        public StockMovement getById(@PathVariable Long id) {
+            return movementService.getById(id);
+        }
+
+        // ✅ Get stock movements created by a specific user
+        @GetMapping("/user/{userId}")
+        public List<StockMovement> getByUser(@PathVariable Long userId) {
+            return movementService.getByUserId(userId);
+        }
+
+        // ✅ Get recent (latest 10) stock movements
+        @GetMapping("/recent")
+        public List<StockMovement> getRecent() {
+            return movementService.getRecent();
+        }
+
+        // ✅ Create new stock movement
+        @PostMapping
+        public StockMovement create(@RequestBody StockMovement movement) {
+            return movementService.recordMovement(movement);
+        }
+
+        // ✅ Count total handled by user
+        @GetMapping("/user/{userId}/count")
+        public Long countUserStock(@PathVariable Long userId) {
+            return movementService.getUserStockHandled(userId);
+        }
+        
+        @PostMapping("/in")
+        @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+        public ResponseEntity<?> stockIn(@RequestBody Map<String,Object> req, Principal principal) {
+            Long productId = Long.valueOf(req.get("productId").toString());
+            Integer qty = Integer.valueOf(req.get("qty").toString());
+            String ref = req.get("reference") != null ? req.get("reference").toString() : null;
+
+            Product p = productRepo.findById(productId).orElseThrow();
+            User u = userRepo.findByUsername(principal.getName()).orElseThrow();
+
+            return ResponseEntity.ok(movementService.recordMovement(p, qty, "IN", ref, u));
+        }
+
+        @PostMapping("/out")
+        @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+        public ResponseEntity<?> stockOut(@RequestBody Map<String,Object> req, Principal principal) {
+            Long productId = Long.valueOf(req.get("productId").toString());
+            Integer qty = Integer.valueOf(req.get("qty").toString());
+            String ref = req.get("reference") != null ? req.get("reference").toString() : null;
+
+            Product p = productRepo.findById(productId).orElseThrow();
+            User u = userRepo.findByUsername(principal.getName()).orElseThrow();
+
+            return ResponseEntity.ok(movementService.recordMovement(p, qty, "OUT", ref, u));
+        }
     }
-
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public ResponseEntity<?> getById(@PathVariable Long id) {
-        return movementService.getById(id);
-    }
-
-
-    @GetMapping("/product/{productId}")
-    public List<StockMovement> byProduct(@PathVariable Long productId) {
-        return movementService.stockRepo.findByProductIdOrderByCreatedAtDesc(productId);
-    }
-
-    @GetMapping("/user/{userId}")
-    public List<StockMovement> byUser(@PathVariable Long userId) {
-        return movementService.stockRepo.findByCreatedByIdOrderByCreatedAtDesc(userId);
-    }
-
-    @GetMapping("/recent")
-    public List<StockMovement> recent() {
-        return movementService.getRecent();
-    }
-
-    @PostMapping("/in")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public ResponseEntity<?> stockIn(@RequestBody Map<String,Object> req, Principal principal) {
-        Long productId = Long.valueOf(req.get("productId").toString());
-        Integer qty = Integer.valueOf(req.get("qty").toString());
-        String ref = req.get("reference") != null ? req.get("reference").toString() : null;
-
-        Product p = productRepo.findById(productId).orElseThrow();
-        User u = userRepo.findByUsername(principal.getName()).orElseThrow();
-
-        return ResponseEntity.ok(movementService.recordMovement(p, qty, "IN", ref, u));
-    }
-
-    @PostMapping("/out")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public ResponseEntity<?> stockOut(@RequestBody Map<String,Object> req, Principal principal) {
-        Long productId = Long.valueOf(req.get("productId").toString());
-        Integer qty = Integer.valueOf(req.get("qty").toString());
-        String ref = req.get("reference") != null ? req.get("reference").toString() : null;
-
-        Product p = productRepo.findById(productId).orElseThrow();
-        User u = userRepo.findByUsername(principal.getName()).orElseThrow();
-
-        return ResponseEntity.ok(movementService.recordMovement(p, qty, "OUT", ref, u));
-    }
-}

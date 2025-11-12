@@ -1,5 +1,6 @@
 package com.erp.controller;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,10 +12,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.erp.dto.SalesTrendDTO;
+import com.erp.dto.TopProductDTO;
+import com.erp.dto.UserPerformanceDTO;
 import com.erp.repository.InvoiceItemRepository;
 import com.erp.repository.InvoiceRepository;
 import com.erp.repository.ProductRepository;
 import com.erp.repository.StockMovementRepository;
+import com.erp.service.InvoiceService;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -26,45 +31,69 @@ public class DashboardController {
     @Autowired private ProductRepository productRepo;
     @Autowired private StockMovementRepository stockRepo;
 
-    // ✅ GET /overview
+    @Autowired private InvoiceService invoiceService;
+
+    // ✅ Dashboard Overview
     @GetMapping("/overview")
     public Map<String, Object> getOverview() {
         Map<String, Object> data = new HashMap<>();
-        data.put("totalSales", invoiceRepo.totalSales());
+        data.put("totalSales", BigDecimal.valueOf(invoiceRepo.totalSales()));
         data.put("lowStockCount", productRepo.lowStockCount());
-        data.put("recentInvoices", invoiceRepo.findTop10ByOrderByCreatedAtDesc());
+        data.put("recentInvoices", invoiceService.getRecentInvoices());
         data.put("recentStock", stockRepo.findTop10ByOrderByCreatedAtDesc());
         return data;
     }
 
-    // ✅ GET /sales-trends
+
+    // ✅ Sales Trend chart
     @GetMapping("/sales-trends")
-    public List<Object[]> salesTrends() {
-        return invoiceRepo.salesTrends();
+    public List<SalesTrendDTO> salesTrends() {
+        return invoiceRepo.salesTrends().stream().map(r -> {
+            SalesTrendDTO dto = new SalesTrendDTO();
+            dto.setDate(r[0].toString());
+            dto.setTotal((BigDecimal) r[1]);
+            return dto;
+        }).toList();
     }
 
-    // ✅ GET /top-products
+    // ✅ Top products list
     @GetMapping("/top-products")
-    public List<Object[]> topProducts() {
-        return invoiceItemRepo.topSellingProducts();
+    public List<TopProductDTO> topProducts() {
+        return invoiceItemRepo.topSellingProducts().stream().map(r -> {
+            TopProductDTO dto = new TopProductDTO();
+
+            // productId
+            Object idObj = r[0];
+            if (idObj instanceof Number num)
+                dto.setProductId(num.longValue());
+            else if (idObj instanceof String str)
+                dto.setProductId(Long.parseLong(str));
+
+            // productName
+            dto.setProductName((String) r[1]);
+
+            // qtySold
+            Object qtyObj = r[2];
+            if (qtyObj instanceof Number num)
+                dto.setQtySold(num.longValue());
+            else if (qtyObj instanceof String str)
+                dto.setQtySold(Long.parseLong(str));
+
+            return dto;
+        }).toList();
     }
 
-    // ✅ GET /activity
-    @GetMapping("/activity")
-    public Map<String, Object> recentActivity() {
-        Map<String, Object> data = new HashMap<>();
-        data.put("recentInvoices", invoiceRepo.findTop10ByOrderByCreatedAtDesc());
-        data.put("recentStock", stockRepo.findTop10ByOrderByCreatedAtDesc());
-        return data;
-    }
 
-    // ✅ GET /performance/user/{userId}
+
+// ✅ User performance
+ // ✅ User Performance
     @GetMapping("/performance/user/{userId}")
-    public Map<String, Object> userPerformance(@PathVariable Long userId) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("totalSales", invoiceRepo.userTotalSales(userId));
-        data.put("itemsSold", invoiceItemRepo.userTotalItemsSold(userId));
-        data.put("stockHandled", stockRepo.userStockHandled(userId));
-        return data;
+    public UserPerformanceDTO userPerformance(@PathVariable Long userId) {
+        UserPerformanceDTO dto = new UserPerformanceDTO();
+        dto.setTotalSales(invoiceRepo.userTotalSales(userId));
+        dto.setItemsSold(invoiceItemRepo.userTotalItemsSold(userId));
+        dto.setStockHandled(stockRepo.userStockHandled(userId)); // Assuming this returns Long
+        return dto;
     }
-}
+
+  }

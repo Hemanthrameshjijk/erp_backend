@@ -1,10 +1,8 @@
 package com.erp.service;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,47 +16,58 @@ import entity.User;
 @Service
 public class StockMovementService {
 
-    @Autowired
-	public StockMovementRepository stockRepo;
-    @Autowired ProductRepository productRepo;
-    
+	 @Autowired
+	    private StockMovementRepository stockRepo;
+	 	private ProductRepository productRepo;
+	    // ✅ Fetch all stock movements
+	    public List<StockMovement> getAll() {
+	        return stockRepo.findAll();
+	    }
 
-    public List<StockMovement> getByProduct(Long productId) {
-        return stockRepo.findByProductIdOrderByCreatedAtDesc(productId);
-    }
-    public ResponseEntity<?> getById(Long id) {
-        return stockRepo.findById(id)
-            .<ResponseEntity<?>>map(sm -> ResponseEntity.ok(sm))
-            .orElse(ResponseEntity.status(404).body(Map.of("error", "Stock movement not found")));
-    }
+	    // ✅ Fetch by ID
+	    public StockMovement getById(Long id) {
+	        return stockRepo.findById(id)
+	                .orElseThrow(() -> new RuntimeException("Stock Movement not found with ID: " + id));
+	    }
 
-    public List<StockMovement> getByUser(Long userId) {
-        return stockRepo.findByCreatedByIdOrderByCreatedAtDesc(userId);
-    }
+	    // ✅ Fetch by User ID
+	    public List<StockMovement> getByUserId(Long userId) {
+	        return stockRepo.findByCreatedByIdOrderByCreatedAtDesc(userId);
+	    }
 
-    @Transactional
-    public StockMovement recordMovement(Product product, Integer qty, String type, String ref, User user) {
-        StockMovement sm = new StockMovement();
-        sm.setProduct(product);
-        sm.setQty(qty);
-        sm.setMovementType(type);
-        sm.setReference(ref);
-        sm.setCreatedBy(user);
+	    // ✅ Save or record new stock movement
+	    public StockMovement recordMovement(StockMovement movement) {
+	        return stockRepo.save(movement);
+	    }
 
-        // Update product stock
-        if (type.equals("IN")) {
-            product.setStock(product.getStock() + qty);
-        } else {
-            product.setStock(product.getStock() - qty);
+	    // ✅ Recent movements (limit top 10)
+	    public List<StockMovement> getRecent() {
+	        return stockRepo.findTop10ByOrderByCreatedAtDesc();
+	    }
 
-            if (product.getStock() < 0) throw new RuntimeException("Stock cannot be negative");
-        }
+	    // ✅ Count stock movements handled by a user
+	    public Long getUserStockHandled(Long userId) {
+	        return stockRepo.userStockHandled(userId);
+	    }
+	    @Transactional
+	    public StockMovement recordMovement(Product product, Integer qty, String type, String ref, User user) {
+	        StockMovement sm = new StockMovement();
+	        sm.setProduct(product);
+	        sm.setQty(qty);
+	        sm.setMovementType(type);
+	        sm.setReference(ref);
+	        sm.setCreatedBy(user);
 
-        productRepo.save(product);
-        return stockRepo.save(sm);
-    }
+	        // Update product stock
+	        if (type.equals("IN")) {
+	            product.setStock(product.getStock() + qty);
+	        } else {
+	            product.setStock(product.getStock() - qty);
 
-    public List<StockMovement> getRecent() {
-        return stockRepo.findRecentMovements();
-    }
-}
+	            if (product.getStock() < 0) throw new RuntimeException("Stock cannot be negative");
+	        }
+
+	        productRepo.save(product);
+	        return stockRepo.save(sm);
+	    }
+	}

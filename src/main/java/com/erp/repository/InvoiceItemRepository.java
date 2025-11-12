@@ -13,10 +13,17 @@ public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, Long> 
 	List<InvoiceItem> findByInvoiceId(Long invoiceId);
 	
 	//
-	  @Query("SELECT ii.product.name, SUM(ii.qty) " +
-	           "FROM InvoiceItem ii GROUP BY ii.product.id ORDER BY SUM(ii.qty) DESC")
-	    List<Object[]> topSellingProducts();
+	@Query("""
+		    SELECT p.id, p.name, SUM(ii.qty)
+		    FROM InvoiceItem ii
+		    JOIN ii.product p
+		    GROUP BY p.id, p.name
+		    ORDER BY SUM(ii.qty) DESC
+		    """)
+		List<Object[]> topSellingProducts();
 
-	    @Query("SELECT SUM(ii.qty) FROM InvoiceItem ii WHERE ii.invoice.createdBy.id = :userId")
-	    Integer userTotalItemsSold(Long userId);
+
+	    @Query("SELECT COALESCE(SUM(ii.qty), 0) FROM InvoiceItem ii WHERE ii.invoice.createdBy.id = :userId")
+	    Long userTotalItemsSold(Long userId);
+	
 }

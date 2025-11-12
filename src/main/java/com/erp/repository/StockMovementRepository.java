@@ -18,8 +18,11 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
 	    List<StockMovement> findRecentMovements();
 	    
 	    List<StockMovement> findTop10ByOrderByCreatedAtDesc();
+
+	    @Query("SELECT COUNT(s) FROM StockMovement s WHERE s.createdBy.id = :userId")
+	    Long userStockHandled(Long userId);
+
 	    
-	    @Query("SELECT SUM(s.qty) FROM StockMovement s WHERE s.createdBy.id = :userId")
-	    Integer userStockHandled(Long userId);
+	    
 	}
 	
